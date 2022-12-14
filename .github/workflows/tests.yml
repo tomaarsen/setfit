@@ -39,7 +39,7 @@ jobs:
       - name: Install dependencies on cache miss
         run: |
           python -m pip install --no-cache-dir --upgrade pip
-          python -m pip install --no-cache-dir ${{ matrix.requirements }}
+          python -m pip install -e --no-cache-dir ${{ matrix.requirements }}
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
       - name: Run unit tests
