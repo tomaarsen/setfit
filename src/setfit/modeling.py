@@ -206,12 +206,6 @@ class SetFitModel(PyTorchModelHubMixin):
 
         self.normalize_embeddings = normalize_embeddings
 
-        raise Exception(
-            "This Exception is introduced to test whether the checked-out SetFit is used,"
-            " or if a cached version of SetFit is used. If the tests fail after this is"
-            " committed, then we know that the -e install works."
-        )
-
     def fit(
         self,
         x_train: List[str],
