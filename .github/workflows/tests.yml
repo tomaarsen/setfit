@@ -41,7 +41,7 @@ jobs:
           python -m pip install --no-cache-dir --upgrade pip
           python -m pip install --no-cache-dir ${{ matrix.requirements }}
           # Force the checked-out setfit to be used:
-          python -m pip uninstall setfit
+          python -m pip uninstall setfit -y
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
       - name: Run unit tests
