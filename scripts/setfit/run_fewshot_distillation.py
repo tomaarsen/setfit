@@ -9,12 +9,12 @@ from warnings import simplefilter
 from xmlrpc.client import Boolean
 
 import pandas as pd
-from datasets import Dataset, DatasetDict, concatenate_datasets, load_dataset
 from distillation_baseline import BaselineDistillation
 from sentence_transformers import losses
 
-from setfit import DistillationSetFitTrainer, SetFitModel, SetFitTrainer
-from setfit.modeling import SetFitBaseModel
+from datasets import Dataset, DatasetDict, concatenate_datasets, load_dataset
+from setfit import DistillationSetFitTrainer, SetFitModel, Trainer
+from setfit.components.modeling import SetFitBaseModel
 from setfit.utils import DEV_DATASET_TO_METRIC, TEST_DATASET_TO_METRIC
 
 
@@ -220,7 +220,7 @@ class RunFewShotDistill:
 
                 if self.mode == self.TEACHER:
                     teacher_model = SetFitModel.from_pretrained(self.model_name)
-                    teacher_trainer = SetFitTrainer(
+                    teacher_trainer = Trainer(
                         model=teacher_model,
                         train_dataset=fewshot_ds[name],
                         eval_dataset=eval_dataset,
@@ -279,10 +279,10 @@ class RunFewShotDistill:
         x_test = test_data["text"]
         y_test = test_data["label"]
 
-        x_train_embd_student = self.trained_teacher_model.model_body.encode(x_train)
+        x_train_embd_student = self.trained_teacher_model.body.encode(x_train)
 
         # baseline student uses teacher probabilities (converted to logits) for training
-        y_train_teacher_pred_prob = self.trained_teacher_model.model_head.predict_proba(x_train_embd_student)
+        y_train_teacher_pred_prob = self.trained_teacher_model.head.predict_proba(x_train_embd_student)
 
         train_raw_student_prob = Dataset.from_dict({"text": x_train, "score": list(y_train_teacher_pred_prob)})
         metric = self.bl_stdnt_distill.standard_model_distillation(train_raw_student_prob, x_test, y_test, num_classes)

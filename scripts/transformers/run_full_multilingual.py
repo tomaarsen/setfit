@@ -3,7 +3,6 @@ from pathlib import Path
 
 import torch
 import typer
-from datasets import concatenate_datasets, load_dataset
 from evaluate import load
 from transformers import (
     AutoModelForSequenceClassification,
@@ -13,6 +12,7 @@ from transformers import (
     TrainingArguments,
 )
 
+from datasets import concatenate_datasets, load_dataset
 from setfit.utils import MULTILINGUAL_DATASET_TO_METRIC
 from utils import get_label_mappings, save_metrics
 

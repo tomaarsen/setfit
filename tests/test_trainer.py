@@ -2,14 +2,14 @@ from unittest import TestCase
 
 import evaluate
 import pytest
-from datasets import Dataset
 from sentence_transformers import losses
 from transformers.testing_utils import require_optuna
 from transformers.utils.hp_naming import TrialShortNamer
 
+from datasets import Dataset
 from setfit import logging
-from setfit.modeling import SetFitModel, SupConLoss
-from setfit.trainer import SetFitTrainer
+from setfit.components.modeling import SetFitModel, SupConLoss
+from setfit.trainer import Trainer
 from setfit.utils import BestRun
 
 
@@ -30,7 +30,7 @@ class SetFitTrainerTest(TestCase):
         dataset = Dataset.from_dict(
             {"text_new": ["a", "b", "c"], "label_new": [0, 1, 2], "extra_column": ["d", "e", "f"]}
         )
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model_init=get_model,
             train_dataset=dataset,
             eval_dataset=dataset,
@@ -45,7 +45,7 @@ class SetFitTrainerTest(TestCase):
         dataset = Dataset.from_dict(
             {"text_new": ["a", "b", "c"], "label_new": [0, 1, 2], "extra_column": ["d", "e", "f"]}
         )
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model=self.model,
             train_dataset=dataset,
             eval_dataset=dataset,
@@ -58,7 +58,7 @@ class SetFitTrainerTest(TestCase):
 
     def test_trainer_works_with_default_columns(self):
         dataset = Dataset.from_dict({"text": ["a", "b", "c"], "label": [0, 1, 2], "extra_column": ["d", "e", "f"]})
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model=self.model, train_dataset=dataset, eval_dataset=dataset, num_iterations=self.num_iterations
         )
         trainer.train()
@@ -67,7 +67,7 @@ class SetFitTrainerTest(TestCase):
 
     def test_trainer_raises_error_with_missing_label(self):
         dataset = Dataset.from_dict({"text": ["a", "b", "c"], "extra_column": ["d", "e", "f"]})
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model=self.model, train_dataset=dataset, eval_dataset=dataset, num_iterations=self.num_iterations
         )
         with pytest.raises(ValueError):
@@ -75,7 +75,7 @@ class SetFitTrainerTest(TestCase):
 
     def test_trainer_raises_error_with_missing_text(self):
         dataset = Dataset.from_dict({"label": [0, 1, 2], "extra_column": ["d", "e", "f"]})
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model=self.model, train_dataset=dataset, eval_dataset=dataset, num_iterations=self.num_iterations
         )
         with pytest.raises(ValueError):
@@ -83,7 +83,7 @@ class SetFitTrainerTest(TestCase):
 
     def test_column_mapping_with_missing_text(self):
         dataset = Dataset.from_dict({"text": ["a", "b", "c"], "extra_column": ["d", "e", "f"]})
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model=self.model,
             train_dataset=dataset,
             eval_dataset=dataset,
@@ -96,7 +96,7 @@ class SetFitTrainerTest(TestCase):
     def test_column_mapping_multilabel(self):
         dataset = Dataset.from_dict({"text_new": ["a", "b", "c"], "label_new": [[0, 1], [1, 2], [2, 0]]})
 
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model=self.model,
             train_dataset=dataset,
             eval_dataset=dataset,
@@ -128,7 +128,7 @@ class SetFitTrainerTest(TestCase):
                 "accuracy": accuracy_metric.compute(predictions=y_pred, references=y_test)["accuracy"],
             }
 
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model=self.model,
             train_dataset=dataset,
             eval_dataset=dataset,
@@ -153,7 +153,7 @@ class SetFitTrainerTest(TestCase):
             {"text_new": ["a", "b", "c"], "label_new": [0, 1, 2], "extra_column": ["d", "e", "f"]}
         )
 
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model=self.model,
             train_dataset=dataset,
             eval_dataset=dataset,
@@ -170,11 +170,11 @@ class SetFitTrainerTest(TestCase):
     def test_trainer_raises_error_with_wrong_warmup_proportion(self):
         # warmup_proportion must not be > 1.0
         with pytest.raises(ValueError):
-            SetFitTrainer(warmup_proportion=1.1)
+            Trainer(warmup_proportion=1.1)
 
         # warmup_proportion must not be < 0.0
         with pytest.raises(ValueError):
-            SetFitTrainer(warmup_proportion=-0.1)
+            Trainer(warmup_proportion=-0.1)
 
 
 class SetFitTrainerDifferentiableHeadTest(TestCase):
@@ -190,7 +190,7 @@ class SetFitTrainerDifferentiableHeadTest(TestCase):
         self.num_iterations = 1
 
     def test_trainer_max_length_exceeds_max_acceptable_length(self):
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model=self.model,
             train_dataset=self.dataset,
             eval_dataset=self.dataset,
@@ -219,7 +219,7 @@ class SetFitTrainerDifferentiableHeadTest(TestCase):
             )
 
     def test_trainer_max_length_is_smaller_than_max_acceptable_length(self):
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model=self.model,
             train_dataset=self.dataset,
             eval_dataset=self.dataset,
@@ -264,7 +264,7 @@ class SetFitTrainerMultilabelTest(TestCase):
                 "accuracy": multilabel_accuracy_metric.compute(predictions=y_pred, references=y_test)["accuracy"],
             }
 
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             model=self.model,
             train_dataset=dataset,
             eval_dataset=dataset,
@@ -320,7 +320,7 @@ class TrainerHyperParameterOptunaIntegrationTest(TestCase):
         def hp_name(trial):
             return MyTrialShortNamer.shortname(trial.params)
 
-        trainer = SetFitTrainer(
+        trainer = Trainer(
             train_dataset=self.dataset,
             eval_dataset=self.dataset,
             num_iterations=self.num_iterations,
@@ -346,7 +346,7 @@ class TrainerHyperParameterOptunaIntegrationTest(TestCase):
 def test_trainer_works_with_non_default_loss_class(loss_class):
     dataset = Dataset.from_dict({"text": ["a 1", "b 1", "c 1", "a 2", "b 2", "c 2"], "label": [0, 1, 2, 0, 1, 2]})
     model = SetFitModel.from_pretrained("sentence-transformers/paraphrase-albert-small-v2")
-    trainer = SetFitTrainer(
+    trainer = Trainer(
         model=model,
         train_dataset=dataset,
         eval_dataset=dataset,

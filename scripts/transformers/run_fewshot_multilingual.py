@@ -4,10 +4,10 @@ from typing import List
 
 import torch
 import typer
-from datasets import concatenate_datasets, load_dataset
 from evaluate import load
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer, TrainingArguments
 
+from datasets import concatenate_datasets, load_dataset
 from setfit.data import SAMPLE_SIZES, create_fewshot_splits
 from setfit.utils import MULTILINGUAL_DATASET_TO_METRIC
 from utils import get_label_mappings, save_metrics

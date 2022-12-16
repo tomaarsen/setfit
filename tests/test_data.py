@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
-from datasets import Dataset
 
+from datasets import Dataset
 from setfit.data import (
     SAMPLE_SIZES,
     SEEDS,

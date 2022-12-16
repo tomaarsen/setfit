@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from datasets import Dataset
 from evaluate import load
 from transformers import (
     AutoModelForSequenceClassification,
@@ -10,6 +9,8 @@ from transformers import (
     Trainer,
     TrainingArguments,
 )
+
+from datasets import Dataset
 
 
 class RegressionTrainer(Trainer):

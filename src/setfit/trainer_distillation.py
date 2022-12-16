@@ -9,21 +9,21 @@ from sentence_transformers.losses.BatchHardTripletLoss import BatchHardTripletLo
 from torch.utils.data import DataLoader
 from transformers.trainer_utils import set_seed
 
-from . import SetFitTrainer, logging
-from .modeling import SupConLoss, sentence_pairs_generation_cos_sim
+from . import Trainer, logging
 
 
 if TYPE_CHECKING:
     import optuna
+
     from datasets import Dataset
 
-    from .modeling import SetFitModel
+    from .components.modeling import SetFitModel
 
 logging.set_verbosity_info()
 logger = logging.get_logger(__name__)
 
 
-class DistillationSetFitTrainer(SetFitTrainer):
+class DistillationSetFitTrainer(Trainer):
     """Trainer to compress a SetFit model with knowledge distillation.
 
     Args:
@@ -158,9 +158,7 @@ class DistillationSetFitTrainer(SetFitTrainer):
         num_epochs = num_epochs or self.num_epochs
         batch_size = batch_size or self.batch_size
         learning_rate = learning_rate or self.learning_rate
-        is_differentiable_head = isinstance(
-            self.student_model.model_head, torch.nn.Module
-        )  # If False, assume using sklearn
+        is_differentiable_head = isinstance(self.student_model.head, torch.nn.Module)  # If False, assume using sklearn
 
         if not is_differentiable_head or self._freeze:
             # sentence-transformers adaptation
@@ -197,8 +195,8 @@ class DistillationSetFitTrainer(SetFitTrainer):
                 train_examples = []
 
                 # **************** student training ****************
-                x_train_embd_student = self.teacher_model.model_body.encode(x_train)
-                y_train = self.teacher_model.model_head.predict(x_train_embd_student)
+                x_train_embd_student = self.teacher_model.body.encode(x_train)
+                y_train = self.teacher_model.head.predict(x_train_embd_student)
 
                 cos_sim_matrix = util.cos_sim(x_train_embd_student, x_train_embd_student)
 
@@ -211,7 +209,7 @@ class DistillationSetFitTrainer(SetFitTrainer):
                 # **************** student training END ****************
 
                 train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=batch_size)
-                train_loss = self.loss_class(self.student_model.model_body)
+                train_loss = self.loss_class(self.student_model.body)
                 train_steps = len(train_dataloader) * num_epochs
 
             logger.info("***** Running training *****")
@@ -221,7 +219,7 @@ class DistillationSetFitTrainer(SetFitTrainer):
             logger.info(f"  Total train batch size = {batch_size}")
 
             warmup_steps = math.ceil(train_steps * self.warmup_proportion)
-            self.student_model.model_body.fit(
+            self.student_model.body.fit(
                 train_objectives=[(train_dataloader, train_loss)],
                 epochs=num_epochs,
                 steps_per_epoch=train_steps,

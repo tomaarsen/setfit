@@ -1,4 +1,4 @@
-from .modeling import SKLearnWrapper
+from .components.modeling import SKLearnWrapper
 
 
 class SetFitPipeline:

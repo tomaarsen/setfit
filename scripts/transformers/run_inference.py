@@ -4,8 +4,9 @@ from time import perf_counter
 import numpy as np
 import torch
 import typer
-from datasets import Dataset, load_dataset
 from transformers import pipeline
+
+from datasets import Dataset, load_dataset
 
 
 RESULTS_PATH = Path("results")

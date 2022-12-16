@@ -2,8 +2,9 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import pandas as pd
 import torch
-from datasets import Dataset, DatasetDict, concatenate_datasets
 from torch.utils.data import Dataset as TorchDataset
+
+from datasets import Dataset, DatasetDict, concatenate_datasets
 
 
 if TYPE_CHECKING:

@@ -11,7 +11,7 @@ from warnings import simplefilter
 from sentence_transformers import models
 from typing_extensions import LiteralString
 
-from setfit import SetFitModel, SetFitTrainer
+from setfit import SetFitModel, Trainer
 from setfit.data import SAMPLE_SIZES
 from setfit.utils import DEV_DATASET_TO_METRIC, LOSS_NAME_TO_CLASS, TEST_DATASET_TO_METRIC, load_data_splits
 
@@ -134,7 +134,7 @@ def main():
                 model.model_body._modules["2"] = models.Normalize()
 
             # Train on current split
-            trainer = SetFitTrainer(
+            trainer = Trainer(
                 model=model,
                 train_dataset=train_data,
                 eval_dataset=test_data,

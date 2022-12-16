@@ -1,11 +1,11 @@
 from unittest import TestCase
 
 import pytest
-from datasets import Dataset
 from sentence_transformers.losses import CosineSimilarityLoss
 
-from setfit import DistillationSetFitTrainer, SetFitTrainer
-from setfit.modeling import SetFitModel
+from datasets import Dataset
+from setfit import DistillationSetFitTrainer, Trainer
+from setfit.components.modeling import SetFitModel
 
 
 class DistillationSetFitTrainerTest(TestCase):
@@ -17,7 +17,7 @@ class DistillationSetFitTrainerTest(TestCase):
     def test_trainer_works_with_default_columns(self):
         dataset = Dataset.from_dict({"text": ["a", "b", "c"], "label": [0, 1, 2], "extra_column": ["d", "e", "f"]})
         # train a teacher model
-        teacher_trainer = SetFitTrainer(
+        teacher_trainer = Trainer(
             model=self.teacher_model,
             train_dataset=dataset,
             eval_dataset=dataset,

@@ -10,7 +10,6 @@ from typing import Dict
 from warnings import simplefilter
 
 import numpy as np
-from datasets import Dataset
 from evaluate import load
 from sentence_transformers import SentenceTransformer
 from sklearn.linear_model import LogisticRegression
@@ -19,8 +18,9 @@ from sklearn.multioutput import ClassifierChain, MultiOutputClassifier
 from torch.utils.data import DataLoader
 from typing_extensions import LiteralString
 
+from datasets import Dataset
+from setfit.components.modeling import SetFitBaseModel, SKLearnWrapper, sentence_pairs_generation_multilabel
 from setfit.data import SAMPLE_SIZES
-from setfit.modeling import SetFitBaseModel, SKLearnWrapper, sentence_pairs_generation_multilabel
 from setfit.utils import DEV_DATASET_TO_METRIC, LOSS_NAME_TO_CLASS, TEST_DATASET_TO_METRIC, load_data_splits_multilabel
 
 

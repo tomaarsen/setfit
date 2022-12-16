@@ -1,14 +1,14 @@
 from unittest import TestCase
 
 import numpy as np
-from datasets import load_dataset
 from sentence_transformers import SentenceTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.multioutput import ClassifierChain, MultiOutputClassifier
 
+from datasets import load_dataset
 from setfit import SetFitHead, SetFitModel
-from setfit.modeling import MODEL_HEAD_NAME, sentence_pairs_generation, sentence_pairs_generation_multilabel
+from setfit.components.modeling import MODEL_HEAD_NAME, sentence_pairs_generation, sentence_pairs_generation_multilabel
 
 
 def test_sentence_pairs_generation():
@@ -107,13 +107,13 @@ class SetFitModelDifferentiableHeadTest(TestCase):
         model.unfreeze()  # unfreeze the model body and head
 
         # run one step
-        model.model_body.train()
-        model.model_head.train()
+        model.body.train()
+        model.head.train()
 
         dataloader = model._prepare_dataloader(x_train, y_train, batch_size=2 * num_classes)
-        criterion = model.model_head.get_loss_fn()
+        criterion = model.head.get_loss_fn()
         optimizer = model._prepare_optimizer(2e-4, None, 0.1)
-        device = model.model_head.device
+        device = model.head.device
 
         batch = next(iter(dataloader))
         features, labels = batch
@@ -121,8 +121,8 @@ class SetFitModelDifferentiableHeadTest(TestCase):
         labels = labels.to(device)
         optimizer.zero_grad()
 
-        outputs = model.model_body(features)
-        outputs = model.model_head(outputs)
+        outputs = model.body(features)
+        outputs = model.head(outputs)
         loss = criterion(outputs["prediction"], labels)
         loss.backward()
         optimizer.step()
@@ -144,17 +144,17 @@ class SetFitModelDifferentiableHeadTest(TestCase):
 
     def test_setfit_body_and_head_on_same_device(self):
         model = self._build_model(num_classes=1)
-        assert model.model_body.device.type == model.model_head.device.type
+        assert model.body.device.type == model.head.device.type
 
     def test_setfit_single_target_differentiable_head(self):
         model = self._build_model(num_classes=1)
 
-        assert type(model.model_head) is SetFitHead
-        assert model.model_head.out_features == 1
+        assert type(model.head) is SetFitHead
+        assert model.head.out_features == 1
 
     def test_setfit_multi_targets_differentiable_head(self):
-        assert type(self.model.model_head) is SetFitHead
-        assert self.model.model_head.out_features == self.out_features
+        assert type(self.model.head) is SetFitHead
+        assert self.model.head.out_features == self.out_features
 
     def test_setfit_model_forward(self):
         # Already ran the model's forward in the fixture, so do simple testing here.
@@ -162,14 +162,14 @@ class SetFitModelDifferentiableHeadTest(TestCase):
 
     def test_setfit_model_backward(self):
         # check the model head's gradients
-        for name, param in self.model.model_head.named_parameters():
+        for name, param in self.model.head.named_parameters():
             assert param.grad is not None, f"Gradients of {name} in the model head is None."
             assert not (param.grad == 0).all().item(), f"All gradients of {name} in the model head are zeros."
             assert not param.grad.isnan().any().item(), f"Gradients of {name} in the model head have NaN."
             assert not param.grad.isinf().any().item(), f"Gradients of {name} in the model head have Inf."
 
         # check the model body's gradients
-        for name, param in self.model.model_body.named_parameters():
+        for name, param in self.model.body.named_parameters():
             if "0.auto_model.pooler" in name:  # ignore pooler
                 continue
 
@@ -182,7 +182,7 @@ class SetFitModelDifferentiableHeadTest(TestCase):
         max_length = int(1e6)
         dataloader = self.model._prepare_dataloader(self.x_train, self.y_train, batch_size=1, max_length=max_length)
 
-        assert dataloader.dataset.max_length == self.model.model_body.get_max_seq_length()
+        assert dataloader.dataset.max_length == self.model.body.get_max_seq_length()
 
     def test_max_length_is_smaller_than_max_acceptable_length(self):
         max_length = 32
