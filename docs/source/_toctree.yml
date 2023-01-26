@@ -1,0 +1,9 @@
+- sections: 
+  - local: index
+    title: SetFit
+  title: Get started
+
+- sections: 
+  - local: model
+    title: SetFitModel
+  title: API
