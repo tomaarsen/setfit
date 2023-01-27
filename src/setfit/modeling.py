@@ -178,8 +178,9 @@ class SetFitHead(models.Dense):
                 A logits' scaling factor. Higher values makes the model less
                 confident and higher values makes it more confident.
                 Will override the temperature given during initialization.
+
         Returns:
-        [`Dict[str, torch.Tensor]` or `Tuple[torch.Tensor]`]
+            `Dict[str, torch.Tensor]` or `Tuple[torch.Tensor]`
         """
         temperature = temperature or self.temperature
         is_features_dict = False  # whether `features` is dict or not
