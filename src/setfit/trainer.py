@@ -1,5 +1,7 @@
+from collections import defaultdict
 import math
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union
+import random
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
 
 import evaluate
 import numpy as np
@@ -10,6 +12,7 @@ from sentence_transformers.losses.BatchHardTripletLoss import BatchHardTripletLo
 from torch.utils.data import DataLoader
 from tqdm.auto import trange
 from transformers.trainer_utils import HPSearchBackend, default_compute_objective, number_of_arguments, set_seed
+from gense import Synthesizer
 
 from . import logging
 from .integrations import default_hp_search_backend, is_optuna_available, run_hp_search_optuna
@@ -25,6 +28,43 @@ if TYPE_CHECKING:
 
 logging.set_verbosity_info()
 logger = logging.get_logger(__name__)
+
+
+class SetFitSynthesizer(Synthesizer):
+    def filter_triplets(self, input_triplets, batch_size=128):
+        # Equivalent to the original filter_triplets, except this one "hacks" the "labels" into the "triplets" (quadlets? haha)
+        logger.info("filtering triplets")
+        prompted_sents = []
+        for sent0, sent1, sent2 in zip(
+            input_triplets["input_sents"], input_triplets["entailment_sents"], input_triplets["contradiction_sents"]
+        ):
+            prompted_sents.append(f'if "{sent0}", does this mean that "{sent1}"? true or false')
+            prompted_sents.append(f'if "{sent0}", does this mean that "{sent2}"? true or false')
+        all_outputs = self.forward(prompted_sents, batch_size)
+        preds0 = [item for idx, item in enumerate(all_outputs) if idx % 2 == 0]
+        preds1 = [item for idx, item in enumerate(all_outputs) if idx % 2 == 1]
+        rtn = {
+            "input_sents": [],
+            "entailment_sents": [],
+            "contradiction_sents": [],
+            "labels": [],
+        }
+        for sent0, sent1, sent2, label, pred0, pred1 in zip(
+            input_triplets["input_sents"],
+            input_triplets["entailment_sents"],
+            input_triplets["contradiction_sents"],
+            input_triplets["labels"],
+            preds0,
+            preds1,
+        ):
+            if pred0 != "true" or pred1 != "false":
+                continue
+            rtn["input_sents"].append(sent0)
+            rtn["entailment_sents"].append(sent1)
+            rtn["contradiction_sents"].append(sent2)
+            rtn["contradiction_sents"].append(sent2)
+            rtn["labels"].append(label)
+        return rtn
 
 
 class SetFitTrainer:
@@ -376,6 +416,7 @@ class SetFitTrainer:
                             np.array(x_train), np.array(y_train), train_examples
                         )
 
+                train_examples += self.get_synthetic_data(x_train, y_train, self.num_iterations)
                 train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=batch_size)
                 train_loss = self.loss_class(self.model.model_body)
 
@@ -409,6 +450,62 @@ class SetFitTrainer:
                 max_length=max_length,
                 show_progress_bar=True,
             )
+
+    def get_synthetic_data(self, sentences: List[str], labels: List[int], num_iterations: int) -> np.ndarray:
+        synthesizer = SetFitSynthesizer("mattymchen/nli-synthesizer-t5-base")
+
+        # v1:
+        # Perhaps a bit too naive: it may produce the same triplets many times,
+        # and we only make pairs using the sentence and its entailment/contradiction
+        """
+        # generate NLI triplets
+        triplets = synthesizer.generate_triplets(sentences * num_iterations)
+
+        # filter triplets
+        filtered_triplets = synthesizer.filter_triplets(triplets)
+
+        pairs = []
+        for inputs, entailment, contradiction in zip(
+            filtered_triplets["input_sents"],
+            filtered_triplets["entailment_sents"],
+            filtered_triplets["contradiction_sents"],
+        ):
+            pairs.append(InputExample(texts=[inputs, entailment], label=1.0))
+            pairs.append(InputExample(texts=[inputs, contradiction], label=0.0))
+            # pairs.append(InputExample(texts=[entailment, contradiction], label=0.0))
+        return pairs
+        """
+        # v2:
+        # generate NLI triplets
+        triplets = synthesizer.generate_triplets(sentences * num_iterations)
+
+        triplets["labels"] = labels
+        # filter triplets
+        filtered_triplets = synthesizer.filter_triplets(triplets)
+
+        mapping = defaultdict(lambda: defaultdict(list))
+        for inputs, entailment, contradiction, label in zip(
+            filtered_triplets["input_sents"],
+            filtered_triplets["entailment_sents"],
+            filtered_triplets["contradiction_sents"],
+            filtered_triplets["labels"],
+        ):
+            # TODO: Try also adding `inputs` again
+            # mapping[label]["positive"].extend([inputs, entailment])
+            mapping[label]["positive"].append(entailment)
+            mapping[label]["negative"].append(contradiction)
+
+        pairs = []
+        for _ in range(num_iterations):
+            for sentence, label in zip(sentences, labels):
+                # Pick a random (positive) sentence with the same label
+                positive = random.choice(mapping[label]["positive"])
+                pairs.append(InputExample(texts=[sentence, positive], label=1.0))
+
+                # Pick a random (negative) sentence that certainly does not have the same label
+                negative = random.choice(mapping[label]["negative"])
+                pairs.append(InputExample(texts=[sentence, negative], label=0.0))
+        return pairs
 
     def evaluate(self):
         """
