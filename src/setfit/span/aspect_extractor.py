@@ -1,7 +1,9 @@
 
 
-from typing import List, Tuple
-from spacy.tokens import Doc
+from typing import List, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from spacy.tokens import Doc
 
 
 class AspectExtractor:
@@ -24,7 +26,7 @@ class AspectExtractor:
         if start is not None:
             yield slice(start, idx)
 
-    def __call__(self, texts: List[str]) -> Tuple[List[Doc], List[slice]]:
+    def __call__(self, texts: List[str]) -> Tuple[List["Doc"], List[slice]]:
         aspects_list = []
         docs = list(self.nlp.pipe(texts))
         for doc in docs:

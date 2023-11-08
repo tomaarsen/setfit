@@ -120,7 +120,8 @@ class AbsaModel:
     polarity_model: PolarityModel
 
     def predict(self, inputs: Union[str, List[str]]) -> List[Dict[str, Any]]:
-        inputs_list = [inputs] if isinstance(inputs, str) else inputs
+        is_str = isinstance(inputs, str)
+        inputs_list = [inputs] if is_str else inputs
         docs, aspects_list = self.aspect_extractor(inputs_list)
         aspects_list = self.aspect_model(docs, aspects_list)
         polarity_list = self.polarity_model(docs, aspects_list)
@@ -132,7 +133,11 @@ class AbsaModel:
                     for aspect_slice, polarity in zip(aspects, polarities)
                 ]
             )
-        return outputs
+        return outputs if not is_str else outputs[0]
+
+    @property
+    def device(self) -> torch.device:
+        return self.aspect_model.device
 
     def to(self, device: Union[str, torch.device]) -> "AbsaModel":
         self.aspect_model.to(device)
@@ -211,8 +216,18 @@ class AbsaModel:
         return cls(aspect_extractor, aspect_model, polarity_model)
 
     def push_to_hub(self, repo_id: str, polarity_repo_id: Optional[str] = None, **kwargs) -> None:
+        if "/" not in repo_id:
+            raise ValueError(
+                '`repo_id` must be a full repository ID, including organisation, e.g. "tomaarsen/setfit-absa-restaurant".'
+            )
+        if polarity_repo_id is not None and "/" not in polarity_repo_id:
+            raise ValueError(
+                '`polarity_repo_id` must be a full repository ID, including organisation, e.g. "tomaarsen/setfit-absa-restaurant".'
+            )
+        commit_message = kwargs.pop("commit_message", "Add SetFit ABSA model")
+
         # Push the files to the repo in a single commit
         with SoftTemporaryDirectory() as tmp_dir:
             save_directory = Path(tmp_dir) / repo_id
             polarity_save_directory = None if polarity_repo_id is None else Path(tmp_dir) / polarity_repo_id
-            self.save_pretrained(save_directory=save_directory, polarity_save_directory=polarity_save_directory, push_to_hub=True, **kwargs)
+            self.save_pretrained(save_directory=save_directory, polarity_save_directory=polarity_save_directory, push_to_hub=True, commit_message=commit_message, **kwargs)

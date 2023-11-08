@@ -6,7 +6,9 @@ from transformers.trainer_callback import TrainerCallback
 from setfit.span.modeling import AbsaModel, AspectModel, PolarityModel, SpanSetFitModel
 from setfit.training_args import TrainingArguments
 from ..trainer import Trainer
+from .. import logging
 
+logger = logging.get_logger(__name__)
 
 class AbsaTrainer:
     """Trainer to train a SetFit ABSA model.
@@ -114,9 +116,13 @@ class AbsaTrainer:
             for annotation in grouped_data[text]:
                 try:
                     start, end = index_ordinal(text, annotation["span"], annotation["ordinal"])
-                except IndexError:
+                except ValueError:
+                    logger.info(
+                        f"The ordinal of {annotation['ordinal']} for span {annotation['span']!r} in {text!r} is too high. "
+                        "Skipping this sample."
+                    )
                     continue
-                
+
                 gold_aspect_span = doc.char_span(start, end)
                 gold_aspects.append(slice(gold_aspect_span.start, gold_aspect_span.end))
                 gold_polarity_labels.append(annotation["label"])
@@ -234,16 +240,7 @@ class AbsaTrainer:
             ignore_patterns (`List[str]` or `str`, *optional*):
                 If provided, files matching any of the patterns are not pushed.
         """
-        if "/" not in repo_id:
-            raise ValueError(
-                '`repo_id` must be a full repository ID, including organisation, e.g. "tomaarsen/setfit-absa-restaurant".'
-            )
-        if polarity_repo_id is not None and "/" not in polarity_repo_id:
-            raise ValueError(
-                '`polarity_repo_id` must be a full repository ID, including organisation, e.g. "tomaarsen/setfit-absa-restaurant".'
-            )
-        commit_message = kwargs.pop("commit_message", "Add SetFit ABSA model")
-        return self.model.push_to_hub(repo_id=repo_id, polarity_repo_id=polarity_repo_id, commit_message=commit_message, **kwargs)
+        return self.model.push_to_hub(repo_id=repo_id, polarity_repo_id=polarity_repo_id, **kwargs)
 
     def evaluate(self, dataset: Optional[Dataset] = None) -> Dict[str, Dict[str, float]]:
         """

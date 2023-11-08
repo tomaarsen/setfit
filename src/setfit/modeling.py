@@ -519,6 +519,15 @@ class SetFitModel(PyTorchModelHubMixin):
         outputs = self.model_head.predict_proba(embeddings)
         return self._output_type_conversion(outputs, as_numpy=as_numpy)
 
+    @property
+    def device(self) -> torch.device:
+        """Get the Torch device that this model is on.
+
+        Returns:
+            torch.device: The device that the model is on.
+        """
+        return self.model_body.device
+
     def to(self, device: Union[str, torch.device]) -> "SetFitModel":
         """Move this SetFitModel to `device`, and then return `self`. This method does not copy.
 
