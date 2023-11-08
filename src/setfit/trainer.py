@@ -69,7 +69,66 @@ if is_in_notebook():
     DEFAULT_PROGRESS_CALLBACK = NotebookProgressCallback
 
 
-class Trainer:
+class ColumnMappingMixin:
+    _REQUIRED_COLUMNS = {"text", "label"}
+
+    def _validate_column_mapping(self, dataset: "Dataset") -> None:
+        """
+        Validates the provided column mapping against the dataset.
+        """
+        column_names = set(dataset.column_names)
+        if self.column_mapping is None and not self._REQUIRED_COLUMNS.issubset(column_names):
+            # Issue #226: load_dataset will automatically assign points to "train" if no split is specified
+            if column_names == {"train"} and isinstance(dataset, DatasetDict):
+                raise ValueError(
+                    "SetFit expected a Dataset, but it got a DatasetDict with the split ['train']. "
+                    "Did you mean to select the training split with dataset['train']?"
+                )
+            elif isinstance(dataset, DatasetDict):
+                raise ValueError(
+                    f"SetFit expected a Dataset, but it got a DatasetDict with the splits {sorted(column_names)}. "
+                    "Did you mean to select one of these splits from the dataset?"
+                )
+            else:
+                raise ValueError(
+                    f"SetFit expected the dataset to have the columns {sorted(self._REQUIRED_COLUMNS)}, "
+                    f"but only the columns {sorted(column_names)} were found. "
+                    "Either make sure these columns are present, or specify which columns to use with column_mapping in Trainer."
+                )
+        if self.column_mapping is not None:
+            missing_columns = self._REQUIRED_COLUMNS.difference(self.column_mapping.values())
+            if missing_columns:
+                raise ValueError(
+                    f"The following columns are missing from the column mapping: {missing_columns}. Please provide a mapping for all required columns."
+                )
+            if not set(self.column_mapping.keys()).issubset(column_names):
+                raise ValueError(
+                    f"The column mapping expected the columns {sorted(self.column_mapping.keys())} in the dataset, "
+                    f"but the dataset had the columns {sorted(column_names)}."
+                )
+
+    def _apply_column_mapping(self, dataset: "Dataset", column_mapping: Dict[str, str]) -> "Dataset":
+        """
+        Applies the provided column mapping to the dataset, renaming columns accordingly.
+        Extra features not in the column mapping are prefixed with `"feat_"`.
+        """
+        dataset = dataset.rename_columns(
+            {
+                **column_mapping,
+                **{col: f"feat_{col}" for col in dataset.column_names if col not in column_mapping and col not in self._REQUIRED_COLUMNS},
+            }
+        )
+        dset_format = dataset.format
+        dataset = dataset.with_format(
+            type=dset_format["type"],
+            columns=dataset.column_names,
+            output_all_columns=dset_format["output_all_columns"],
+            **dset_format["format_kwargs"],
+        )
+        return dataset
+
+
+class Trainer(ColumnMappingMixin):
     """Trainer to train a SetFit model.
 
     Args:
@@ -101,8 +160,6 @@ class Trainer:
             The expected format is a dictionary with the following format:
             `{"text_column_name": "text", "label_column_name: "label"}`.
     """
-
-    _REQUIRED_COLUMNS = {"text", "label"}
 
     def __init__(
         self,
@@ -187,61 +244,6 @@ class Trainer:
                first case, will remove the first member of that class found in the list of callbacks.
         """
         self.callback_handler.remove_callback(callback)
-
-    def _validate_column_mapping(self, dataset: "Dataset") -> None:
-        """
-        Validates the provided column mapping against the dataset.
-        """
-        column_names = set(dataset.column_names)
-        if self.column_mapping is None and not self._REQUIRED_COLUMNS.issubset(column_names):
-            # Issue #226: load_dataset will automatically assign points to "train" if no split is specified
-            if column_names == {"train"} and isinstance(dataset, DatasetDict):
-                raise ValueError(
-                    "SetFit expected a Dataset, but it got a DatasetDict with the split ['train']. "
-                    "Did you mean to select the training split with dataset['train']?"
-                )
-            elif isinstance(dataset, DatasetDict):
-                raise ValueError(
-                    f"SetFit expected a Dataset, but it got a DatasetDict with the splits {sorted(column_names)}. "
-                    "Did you mean to select one of these splits from the dataset?"
-                )
-            else:
-                raise ValueError(
-                    f"SetFit expected the dataset to have the columns {sorted(self._REQUIRED_COLUMNS)}, "
-                    f"but only the columns {sorted(column_names)} were found. "
-                    "Either make sure these columns are present, or specify which columns to use with column_mapping in Trainer."
-                )
-        if self.column_mapping is not None:
-            missing_columns = self._REQUIRED_COLUMNS.difference(self.column_mapping.values())
-            if missing_columns:
-                raise ValueError(
-                    f"The following columns are missing from the column mapping: {missing_columns}. Please provide a mapping for all required columns."
-                )
-            if not set(self.column_mapping.keys()).issubset(column_names):
-                raise ValueError(
-                    f"The column mapping expected the columns {sorted(self.column_mapping.keys())} in the dataset, "
-                    f"but the dataset had the columns {sorted(column_names)}."
-                )
-
-    def _apply_column_mapping(self, dataset: "Dataset", column_mapping: Dict[str, str]) -> "Dataset":
-        """
-        Applies the provided column mapping to the dataset, renaming columns accordingly.
-        Extra features not in the column mapping are prefixed with `"feat_"`.
-        """
-        dataset = dataset.rename_columns(
-            {
-                **column_mapping,
-                **{col: f"feat_{col}" for col in dataset.column_names if col not in column_mapping},
-            }
-        )
-        dset_format = dataset.format
-        dataset = dataset.with_format(
-            type=dset_format["type"],
-            columns=dataset.column_names,
-            output_all_columns=dset_format["output_all_columns"],
-            **dset_format["format_kwargs"],
-        )
-        return dataset
 
     def apply_hyperparameters(self, params: Dict[str, Any], final_model: bool = False) -> None:
         """Applies a dictionary of hyperparameters to both the trainer and the model

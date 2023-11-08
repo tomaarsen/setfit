@@ -9,13 +9,13 @@ from setfit.span.modeling import AbsaModel, AspectModel, PolarityModel, SpanSetF
 from setfit.training_args import TrainingArguments
 
 from .. import logging
-from ..trainer import Trainer
+from ..trainer import ColumnMappingMixin, Trainer
 
 
 logger = logging.get_logger(__name__)
 
 
-class AbsaTrainer:
+class AbsaTrainer(ColumnMappingMixin):
     """Trainer to train a SetFit ABSA model.
 
     Args:
@@ -49,8 +49,9 @@ class AbsaTrainer:
         column_mapping (`Dict[str, str]`, *optional*):
             A mapping from the column names in the dataset to the column names expected by the model.
             The expected format is a dictionary with the following format:
-            `{"text_column_name": "text", "label_column_name: "label"}`.
+            `{"text_column_name": "text", "span_column_name": "span", "label_column_name: "label", "ordinal_column_name": "ordinal"}`.
     """
+    _REQUIRED_COLUMNS = {"text", "span", "label", "ordinal"}
 
     def __init__(
         self,
@@ -68,10 +69,13 @@ class AbsaTrainer:
         self.model = model
         self.aspect_extractor = model.aspect_extractor
 
-        # TODO: column_mapping should be applied first rather than propagated down to the regular SetFit Trainer
+        if train_dataset is not None and column_mapping:
+            train_dataset = self._apply_column_mapping(train_dataset, column_mapping)
         aspect_train_dataset, polarity_train_dataset = self.preprocess_dataset(
             model.aspect_model, model.polarity_model, train_dataset
         )
+        if eval_dataset is not None and column_mapping:
+            eval_dataset = self._apply_column_mapping(eval_dataset, column_mapping)
         aspect_eval_dataset, polarity_eval_dataset = self.preprocess_dataset(
             model.aspect_model, model.polarity_model, eval_dataset
         )
@@ -87,7 +91,6 @@ class AbsaTrainer:
             metric=metric,
             metric_kwargs=metric_kwargs,
             callbacks=callbacks,
-            column_mapping=column_mapping,
         )
         self.polarity_trainer = Trainer(
             model.polarity_model,
@@ -100,7 +103,6 @@ class AbsaTrainer:
             metric=metric,
             metric_kwargs=metric_kwargs,
             callbacks=callbacks,
-            column_mapping=column_mapping,
         )
 
     def preprocess_dataset(
