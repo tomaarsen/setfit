@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import evaluate
+from sklearn.preprocessing import LabelEncoder
 import torch
 from datasets import Dataset, DatasetDict
 from sentence_transformers import InputExample, SentenceTransformer, losses
@@ -91,6 +92,10 @@ class Trainer:
         metric_kwargs (`Dict[str, Any]`, *optional*):
             Keyword arguments passed to the evaluation function if `metric` is an evaluation string like "f1".
             For example useful for providing an averaging strategy for computing f1 in a multi-label setting.
+        callbacks: (`List[~transformers.TrainerCallback]`, *optional*):
+            A list of callbacks to customize the training loop. Will add those to the list of default callbacks
+            detailed in [here](https://huggingface.co/docs/transformers/main/en/main_classes/callback).
+            If you want to remove one of the default callbacks used, use the `Trainer.remove_callback()` method.
         column_mapping (`Dict[str, str]`, *optional*):
             A mapping from the column names in the dataset to the column names expected by the model.
             The expected format is a dictionary with the following format:
@@ -326,7 +331,7 @@ class Trainer:
         args: Optional[TrainingArguments] = None,
         trial: Optional[Union["optuna.Trial", Dict[str, Any]]] = None,
         **kwargs,
-    ):
+    ) -> None:
         """
         Main training entry point.
 
@@ -730,6 +735,8 @@ class Trainer:
         """
 
         eval_dataset = dataset or self.eval_dataset
+        if eval_dataset is None:
+            raise ValueError("No evaluation dataset provided to `Trainer.evaluate` nor the `Trainer` initialzation.")
         self._validate_column_mapping(eval_dataset)
 
         if self.column_mapping is not None:
@@ -743,6 +750,13 @@ class Trainer:
         y_pred = self.model.predict(x_test)
         if isinstance(y_pred, torch.Tensor):
             y_pred = y_pred.cpu()
+
+        # Normalize string outputs
+        if y_test and isinstance(y_test[0], str):
+            encoder = LabelEncoder()
+            encoder.fit(list(y_test) + list(y_pred))
+            y_test = encoder.transform(y_test)
+            y_pred = encoder.transform(y_pred)
 
         if isinstance(self.metric, str):
             metric_config = "multilabel" if self.model.multi_target_strategy is not None else None
@@ -841,7 +855,7 @@ class Trainer:
 
         Args:
             repo_id (`str`):
-                The full repository ID to push to, e.g. `"tomaarsen/setfit_sst2"`.
+                The full repository ID to push to, e.g. `"tomaarsen/setfit-sst2"`.
             config (`dict`, *optional*):
                 Configuration object to be saved alongside the model weights.
             commit_message (`str`, *optional*):
@@ -871,7 +885,7 @@ class Trainer:
         """
         if "/" not in repo_id:
             raise ValueError(
-                '`repo_id` must be a full repository ID, including organisation, e.g. "tomaarsen/setfit_sst2".'
+                '`repo_id` must be a full repository ID, including organisation, e.g. "tomaarsen/setfit-sst2".'
             )
         commit_message = kwargs.pop("commit_message", "Add SetFit model")
         return self.model.push_to_hub(repo_id, commit_message=commit_message, **kwargs)

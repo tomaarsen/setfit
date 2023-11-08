@@ -17,6 +17,7 @@ import numpy as np
 import requests
 import torch
 from huggingface_hub import PyTorchModelHubMixin, hf_hub_download
+from huggingface_hub.utils import validate_hf_hub_args
 from sentence_transformers import SentenceTransformer, models
 from sklearn.linear_model import LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
@@ -246,7 +247,6 @@ class SetFitModel(PyTorchModelHubMixin):
     model_body: Optional[SentenceTransformer] = (None,)
     model_head: Optional[Union[SetFitHead, LogisticRegression]] = None
     multi_target_strategy: Optional[str] = None
-    l2_weight: float = 1e-2
     normalize_embeddings: bool = False
 
     @property
@@ -372,7 +372,7 @@ class SetFitModel(PyTorchModelHubMixin):
         l2_weight: float,
     ) -> torch.optim.Optimizer:
         body_learning_rate = body_learning_rate or head_learning_rate
-        l2_weight = l2_weight or self.l2_weight
+        l2_weight = l2_weight or 1e-2
         optimizer = torch.optim.AdamW(
             [
                 {
@@ -589,6 +589,7 @@ class SetFitModel(PyTorchModelHubMixin):
         joblib.dump(self.model_head, str(Path(save_directory) / MODEL_HEAD_NAME))
 
     @classmethod
+    @validate_hf_hub_args
     def _from_pretrained(
         cls,
         model_id: str,
@@ -598,13 +599,13 @@ class SetFitModel(PyTorchModelHubMixin):
         proxies: Optional[Dict] = None,
         resume_download: Optional[bool] = None,
         local_files_only: Optional[bool] = None,
-        use_auth_token: Optional[Union[bool, str]] = None,
+        token: Optional[Union[bool, str]] = None,
         multi_target_strategy: Optional[str] = None,
         use_differentiable_head: bool = False,
         normalize_embeddings: bool = False,
         **model_kwargs,
     ) -> "SetFitModel":
-        model_body = SentenceTransformer(model_id, cache_folder=cache_dir, use_auth_token=use_auth_token)
+        model_body = SentenceTransformer(model_id, cache_folder=cache_dir, use_auth_token=token)
         target_device = model_body._target_device
         model_body.to(target_device)  # put `model_body` on the target device
 
@@ -628,7 +629,7 @@ class SetFitModel(PyTorchModelHubMixin):
                     force_download=force_download,
                     proxies=proxies,
                     resume_download=resume_download,
-                    use_auth_token=use_auth_token,
+                    token=token,
                     local_files_only=local_files_only,
                 )
             except requests.exceptions.RequestException:
@@ -641,7 +642,7 @@ class SetFitModel(PyTorchModelHubMixin):
         if model_head_file is not None:
             model_head = joblib.load(model_head_file)
         else:
-            head_params = model_kwargs.get("head_params", {})
+            head_params = model_kwargs.pop("head_params", {})
             if use_differentiable_head:
                 if multi_target_strategy is None:
                     use_multitarget = False
@@ -677,9 +678,12 @@ class SetFitModel(PyTorchModelHubMixin):
                 else:
                     model_head = clf
 
+        # Remove the `transformers` config
+        model_kwargs.pop("config", None)
         return cls(
             model_body=model_body,
             model_head=model_head,
             multi_target_strategy=multi_target_strategy,
             normalize_embeddings=normalize_embeddings,
+            **model_kwargs,
         )
