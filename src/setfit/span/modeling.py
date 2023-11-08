@@ -45,6 +45,7 @@ class SpanSetFitModel(SetFitModel):
     def _from_pretrained(
         cls,
         model_id: str,
+        span_context: Optional[int] = None,
         revision: Optional[str] = None,
         cache_dir: Optional[str] = None,
         force_download: Optional[bool] = None,
@@ -78,6 +79,9 @@ class SpanSetFitModel(SetFitModel):
             with open(config_file, "r", encoding="utf-8") as f:
                 config = json.load(f)
             model_kwargs.update(config)
+
+        if span_context is not None:
+            model_kwargs["span_context"] = span_context
 
         return super(SpanSetFitModel, cls)._from_pretrained(
             model_id,
@@ -167,6 +171,7 @@ class AbsaModel:
         model_id: str,
         polarity_model_id: Optional[str] = None,
         spacy_model: Optional[str] = "en_core_web_lg",
+        span_contexts: Tuple[Optional[int], Optional[int]] = (None, None),
         force_download: bool = False,
         resume_download: bool = False,
         proxies: Optional[Dict] = None,
@@ -182,6 +187,7 @@ class AbsaModel:
             model_id, revision = model_id.split("@")
         aspect_model = AspectModel.from_pretrained(
             model_id,
+            span_context=span_contexts[0],
             revision=revision,
             force_download=force_download,
             resume_download=resume_download,
@@ -200,6 +206,7 @@ class AbsaModel:
                 model_id, revision = model_id.split("@")
         polarity_model = PolarityModel.from_pretrained(
             model_id,
+            span_context=span_contexts[1],
             revision=revision,
             force_download=force_download,
             resume_download=resume_download,

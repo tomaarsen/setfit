@@ -37,8 +37,14 @@ def test_loading():
     assert model.aspect_model.normalize_embeddings
     assert model.polarity_model.normalize_embeddings
 
-    # TODO: Loading with specific `span_context`
+    aspect_model = AspectModel.from_pretrained("sentence-transformers/paraphrase-albert-small-v2", span_context=12)
+    assert aspect_model.span_context == 12
+    polarity_model = PolarityModel.from_pretrained("sentence-transformers/paraphrase-albert-small-v2", span_context=12)
+    assert polarity_model.span_context == 12
 
+    model = AbsaModel.from_pretrained("sentence-transformers/paraphrase-albert-small-v2", span_contexts=(12, None))
+    assert model.aspect_model.span_context == 12
+    assert model.polarity_model.span_context == 3 # <- default
 
 def test_save_load(absa_model: AbsaModel) -> None:
     absa_model.polarity_model.span_context = 5
