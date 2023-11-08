@@ -1,14 +1,19 @@
 from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-from datasets import Dataset
+
 import optuna
+from datasets import Dataset
 from transformers.trainer_callback import TrainerCallback
+
 from setfit.span.modeling import AbsaModel, AspectModel, PolarityModel, SpanSetFitModel
 from setfit.training_args import TrainingArguments
-from ..trainer import Trainer
+
 from .. import logging
+from ..trainer import Trainer
+
 
 logger = logging.get_logger(__name__)
+
 
 class AbsaTrainer:
     """Trainer to train a SetFit ABSA model.
@@ -46,6 +51,7 @@ class AbsaTrainer:
             The expected format is a dictionary with the following format:
             `{"text_column_name": "text", "label_column_name: "label"}`.
     """
+
     def __init__(
         self,
         model: Optional["AbsaModel"] = None,
@@ -63,15 +69,21 @@ class AbsaTrainer:
         self.aspect_extractor = model.aspect_extractor
 
         # TODO: column_mapping should be applied first rather than propagated down to the regular SetFit Trainer
-        aspect_train_dataset, polarity_train_dataset = self.preprocess_dataset(model.aspect_model, model.polarity_model, train_dataset)
-        aspect_eval_dataset, polarity_eval_dataset = self.preprocess_dataset(model.aspect_model, model.polarity_model, eval_dataset)
+        aspect_train_dataset, polarity_train_dataset = self.preprocess_dataset(
+            model.aspect_model, model.polarity_model, train_dataset
+        )
+        aspect_eval_dataset, polarity_eval_dataset = self.preprocess_dataset(
+            model.aspect_model, model.polarity_model, eval_dataset
+        )
 
         self.aspect_trainer = Trainer(
             model.aspect_model,
             args=args,
             train_dataset=aspect_train_dataset,
             eval_dataset=aspect_eval_dataset,
-            model_init=(lambda *args, **kwargs: model_init(*args, **kwargs).aspect_model) if model_init is not None else None,
+            model_init=(lambda *args, **kwargs: model_init(*args, **kwargs).aspect_model)
+            if model_init is not None
+            else None,
             metric=metric,
             metric_kwargs=metric_kwargs,
             callbacks=callbacks,
@@ -82,14 +94,18 @@ class AbsaTrainer:
             args=polarity_args or args,
             train_dataset=polarity_train_dataset,
             eval_dataset=polarity_eval_dataset,
-            model_init=(lambda *args, **kwargs: model_init(*args, **kwargs).polarity_model) if model_init is not None else None,
+            model_init=(lambda *args, **kwargs: model_init(*args, **kwargs).polarity_model)
+            if model_init is not None
+            else None,
             metric=metric,
             metric_kwargs=metric_kwargs,
             callbacks=callbacks,
             column_mapping=column_mapping,
         )
 
-    def preprocess_dataset(self, aspect_model: AspectModel, polarity_model: PolarityModel, dataset: Dataset) -> Dataset:
+    def preprocess_dataset(
+        self, aspect_model: AspectModel, polarity_model: PolarityModel, dataset: Dataset
+    ) -> Dataset:
         if dataset is None:
             return dataset, dataset
 
@@ -130,7 +146,7 @@ class AbsaTrainer:
             # The Aspect model uses all predicted aspects, with labels depending on whether
             # the predicted aspects are indeed true/gold aspects.
             aspect_labels.extend([aspect in gold_aspects for aspect in aspects])
-            
+
             # The Polarity model uses the intersection of pred and gold aspects, with labels for the gold label.
             intersected_aspects = []
             for gold_aspect, gold_label in zip(gold_aspects, gold_polarity_labels):
@@ -141,8 +157,9 @@ class AbsaTrainer:
 
         aspect_texts = list(aspect_model.prepend_aspects(docs, aspects_list))
         polarity_texts = list(polarity_model.prepend_aspects(docs, intersected_aspect_list))
-        return Dataset.from_dict({"text": aspect_texts, "label": aspect_labels}), Dataset.from_dict({"text": polarity_texts, "label": polarity_labels})
-
+        return Dataset.from_dict({"text": aspect_texts, "label": aspect_labels}), Dataset.from_dict(
+            {"text": polarity_texts, "label": polarity_labels}
+        )
 
     def train(
         self,
@@ -256,7 +273,9 @@ class AbsaTrainer:
         """
         aspect_eval_dataset = polarity_eval_dataset = None
         if dataset:
-            aspect_eval_dataset, polarity_eval_dataset = self.preprocess_dataset(self.model.aspect_model, self.model.polarity_model, dataset)
+            aspect_eval_dataset, polarity_eval_dataset = self.preprocess_dataset(
+                self.model.aspect_model, self.model.polarity_model, dataset
+            )
         return {
             "aspect": self.aspect_trainer.evaluate(aspect_eval_dataset),
             "polarity": self.polarity_trainer.evaluate(polarity_eval_dataset),

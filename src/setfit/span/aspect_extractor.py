@@ -1,6 +1,5 @@
+from typing import TYPE_CHECKING, List, Tuple
 
-
-from typing import List, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from spacy.tokens import Doc
@@ -30,6 +29,6 @@ class AspectExtractor:
         aspects_list = []
         docs = list(self.nlp.pipe(texts))
         for doc in docs:
-            aspect_mask = [token.pos_ in ('NOUN', 'PROPN') for token in doc]
+            aspect_mask = [token.pos_ in ("NOUN", "PROPN") for token in doc]
             aspects_list.append(list(self.find_groups(aspect_mask)))
         return docs, aspects_list

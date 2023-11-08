@@ -6,13 +6,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import evaluate
-from sklearn.preprocessing import LabelEncoder
 import torch
 from datasets import Dataset, DatasetDict
 from sentence_transformers import InputExample, SentenceTransformer, losses
 from sentence_transformers.datasets import SentenceLabelDataset
 from sentence_transformers.losses.BatchHardTripletLoss import BatchHardTripletLossDistanceFunction
 from sentence_transformers.util import batch_to_device
+from sklearn.preprocessing import LabelEncoder
 from torch import nn
 from torch.cuda.amp import autocast
 from torch.utils.data import DataLoader
@@ -375,7 +375,7 @@ class Trainer:
             parameters.extend(self.dataset_to_parameters(dataset))
 
         self.train_embeddings(*parameters, args=args)
-        training_parameters = parameters[:len(parameters) // 2] if self.eval_dataset else parameters
+        training_parameters = parameters[: len(parameters) // 2] if self.eval_dataset else parameters
         self.train_classifier(*training_parameters, args=args)
 
     def dataset_to_parameters(self, dataset: Dataset) -> List[Iterable]:

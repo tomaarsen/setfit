@@ -1,7 +1,8 @@
+from datasets import Dataset
+from transformers import TrainerCallback
+
 from setfit import AbsaTrainer
 from setfit.span.modeling import AbsaModel
-from transformers import TrainerCallback
-from datasets import Dataset
 
 
 def test_trainer(absa_model: AbsaModel, absa_dataset: Dataset):

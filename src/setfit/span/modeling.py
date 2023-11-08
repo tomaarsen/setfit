@@ -1,16 +1,18 @@
-from dataclasses import dataclass
 import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
-from huggingface_hub import hf_hub_download
-from huggingface_hub.utils import validate_hf_hub_args, SoftTemporaryDirectory
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+
 import requests
 import torch
+from huggingface_hub import hf_hub_download
+from huggingface_hub.utils import SoftTemporaryDirectory, validate_hf_hub_args
+
+from .. import logging
 from ..modeling import SetFitModel
 from .aspect_extractor import AspectExtractor
-from .. import logging
-from typing import TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from spacy.tokens import Doc
@@ -98,7 +100,6 @@ class SpanSetFitModel(SetFitModel):
 
 
 class AspectModel(SpanSetFitModel):
-
     # TODO: Assumes binary SetFitModel with 0 == no aspect, 1 == aspect
     def __call__(self, docs: List["Doc"], aspects_list: List[List[slice]]) -> List[bool]:
         sentence_preds = super().__call__(docs, aspects_list)
@@ -230,4 +231,10 @@ class AbsaModel:
         with SoftTemporaryDirectory() as tmp_dir:
             save_directory = Path(tmp_dir) / repo_id
             polarity_save_directory = None if polarity_repo_id is None else Path(tmp_dir) / polarity_repo_id
-            self.save_pretrained(save_directory=save_directory, polarity_save_directory=polarity_save_directory, push_to_hub=True, commit_message=commit_message, **kwargs)
+            self.save_pretrained(
+                save_directory=save_directory,
+                polarity_save_directory=polarity_save_directory,
+                push_to_hub=True,
+                commit_message=commit_message,
+                **kwargs,
+            )

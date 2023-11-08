@@ -1,7 +1,7 @@
 import pytest
-
-from setfit import SetFitModel, AbsaModel
 from datasets import Dataset
+
+from setfit import AbsaModel, SetFitModel
 
 
 @pytest.fixture()
@@ -12,6 +12,7 @@ def model() -> SetFitModel:
 @pytest.fixture()
 def absa_model() -> AbsaModel:
     return AbsaModel.from_pretrained("sentence-transformers/paraphrase-albert-small-v2")
+
 
 @pytest.fixture()
 def absa_dataset() -> Dataset:
@@ -25,9 +26,4 @@ def absa_dataset() -> Dataset:
     spans = ["food", "ambiance", "Food", "bagels", "cream cheese"]
     labels = ["negative", "negative", "positive", "positive", "positive"]
     ordinals = [0, 0, 0, 0, 0]
-    return Dataset.from_dict({
-        "text": texts,
-        "span": spans,
-        "label": labels,
-        "ordinal": ordinals
-    })
+    return Dataset.from_dict({"text": texts, "span": spans, "label": labels, "ordinal": ordinals})
