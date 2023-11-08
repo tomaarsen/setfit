@@ -34,7 +34,6 @@ class SpanSetFitModel(SetFitModel):
                 yield aspect.text + ":" + doc.text
 
     def __call__(self, docs: List["Doc"], aspects_list: List[List[slice]]) -> List[bool]:
-        # TODO: Use configured value for context instead
         inputs_list = list(self.prepend_aspects(docs, aspects_list))
         preds = self.predict(inputs_list, as_numpy=True)
         iter_preds = iter(preds)
