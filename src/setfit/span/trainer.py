@@ -19,8 +19,8 @@ class AbsaTrainer(ColumnMappingMixin):
     """Trainer to train a SetFit ABSA model.
 
     Args:
-        model (`AbsaModel`, *optional*):
-            The AbsaModel model to train. If not provided, a `model_init` must be passed.
+        model (`AbsaModel`):
+            The AbsaModel model to train.
         args (`TrainingArguments`, *optional*):
             The training arguments to use. If `polarity_args` is not defined, then `args` is used for both
             the aspect and the polarity model.
@@ -31,10 +31,6 @@ class AbsaTrainer(ColumnMappingMixin):
             The training dataset.
         eval_dataset (`Dataset`, *optional*):
             The evaluation dataset.
-        model_init (`Callable[[], SetFitModel]`, *optional*):
-            A function that instantiates the model to be used. If provided, each call to
-            [`~Trainer.train`] will start from a new instance of the model as given by this
-            function when a `trial` is passed.
         metric (`str` or `Callable`, *optional*, defaults to `"accuracy"`):
             The metric to use for evaluation. If a string is provided, we treat it as the metric
             name and load it with default settings.
@@ -55,12 +51,11 @@ class AbsaTrainer(ColumnMappingMixin):
 
     def __init__(
         self,
-        model: Optional["AbsaModel"] = None,
+        model: AbsaModel,
         args: Optional[TrainingArguments] = None,
         polarity_args: Optional[TrainingArguments] = None,
         train_dataset: Optional["Dataset"] = None,
         eval_dataset: Optional["Dataset"] = None,
-        model_init: Optional[Callable[[], "AbsaModel"]] = None,
         metric: Union[str, Callable[["Dataset", "Dataset"], Dict[str, float]]] = "accuracy",
         metric_kwargs: Optional[Dict[str, Any]] = None,
         callbacks: Optional[List[TrainerCallback]] = None,
@@ -85,9 +80,6 @@ class AbsaTrainer(ColumnMappingMixin):
             args=args,
             train_dataset=aspect_train_dataset,
             eval_dataset=aspect_eval_dataset,
-            model_init=(lambda *args, **kwargs: model_init(*args, **kwargs).aspect_model)
-            if model_init is not None
-            else None,
             metric=metric,
             metric_kwargs=metric_kwargs,
             callbacks=callbacks,
@@ -97,9 +89,6 @@ class AbsaTrainer(ColumnMappingMixin):
             args=polarity_args or args,
             train_dataset=polarity_train_dataset,
             eval_dataset=polarity_eval_dataset,
-            model_init=(lambda *args, **kwargs: model_init(*args, **kwargs).polarity_model)
-            if model_init is not None
-            else None,
             metric=metric,
             metric_kwargs=metric_kwargs,
             callbacks=callbacks,
