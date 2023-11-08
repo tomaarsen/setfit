@@ -116,6 +116,8 @@ class Trainer:
         callbacks: Optional[List[TrainerCallback]] = None,
         column_mapping: Optional[Dict[str, str]] = None,
     ) -> None:
+        if args is not None and not isinstance(args, TrainingArguments):
+            raise ValueError("`args` must be a `TrainingArguments` instance imported from `setfit`.")
         self.args = args or TrainingArguments()
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
