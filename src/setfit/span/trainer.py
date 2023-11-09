@@ -28,9 +28,9 @@ class AbsaTrainer(ColumnMappingMixin):
             The training arguments to use for the polarity model. If not defined, `args` is used for both
             the aspect and the polarity model.
         train_dataset (`Dataset`):
-            The training dataset.
+            The training dataset. The dataset must have "text", "span", "label" and "ordinal" columns.
         eval_dataset (`Dataset`, *optional*):
-            The evaluation dataset.
+            The evaluation dataset. The dataset must have "text", "span", "label" and "ordinal" columns.
         metric (`str` or `Callable`, *optional*, defaults to `"accuracy"`):
             The metric to use for evaluation. If a string is provided, we treat it as the metric
             name and load it with default settings.
