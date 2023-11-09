@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
@@ -8,6 +9,7 @@ import requests
 import torch
 from huggingface_hub import hf_hub_download
 from huggingface_hub.utils import SoftTemporaryDirectory, validate_hf_hub_args
+from jinja2 import Environment, FileSystemLoader
 
 from .. import logging
 from ..modeling import SetFitModel
@@ -100,6 +102,44 @@ class SpanSetFitModel(SetFitModel):
             json.dump({"span_context": self.span_context}, f, indent=2)
 
         super()._save_pretrained(save_directory)
+
+    def create_model_card(self, path: str, model_name: Optional[str] = None) -> None:
+        """Creates and saves a model card for a SetFit model.
+
+        Args:
+            path (str): The path to save the model card to.
+            model_name (str, *optional*): The name of the model. Defaults to `SetFit Model`.
+        """
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        # If the model_path is a folder that exists locally, i.e. when create_model_card is called
+        # via push_to_hub, and the path is in a temporary folder, then we only take the last two
+        # directories
+        model_path = Path(model_name)
+        if model_path.exists() and Path(tempfile.gettempdir()) in model_path.resolve().parents:
+            model_name = "/".join(model_path.parts[-2:])
+
+        environment = Environment(loader=FileSystemLoader(Path(__file__).parent))
+        template = environment.get_template("model_card_template.md")
+        is_aspect = isinstance(self, AspectModel)
+        aspect_model = "setfit-absa-aspect"
+        polarity_model = "setfit-absa-polarity"
+        if model_name is not None:
+            if is_aspect:
+                aspect_model = model_name
+                if model_name.endswith("-aspect"):
+                    polarity_model = model_name[: -len("-aspect")] + "-polarity"
+            else:
+                polarity_model = model_name
+                if model_name.endswith("-polarity"):
+                    aspect_model = model_name[: -len("-polarity")] + "-aspect"
+
+        model_card_content = template.render(
+            model_name=model_name, is_aspect=is_aspect, aspect_model=aspect_model, polarity_model=polarity_model
+        )
+        with open(os.path.join(path, "README.md"), "w", encoding="utf-8") as f:
+            f.write(model_card_content)
 
 
 class AspectModel(SpanSetFitModel):
