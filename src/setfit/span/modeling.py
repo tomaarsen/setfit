@@ -167,7 +167,13 @@ class AbsaModel:
         is_str = isinstance(inputs, str)
         inputs_list = [inputs] if is_str else inputs
         docs, aspects_list = self.aspect_extractor(inputs_list)
+        if sum(aspects_list, []) == []:
+            return aspects_list
+
         aspects_list = self.aspect_model(docs, aspects_list)
+        if sum(aspects_list, []) == []:
+            return aspects_list
+
         polarity_list = self.polarity_model(docs, aspects_list)
         outputs = []
         for docs, aspects, polarities in zip(docs, aspects_list, polarity_list):
