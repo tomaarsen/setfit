@@ -44,7 +44,8 @@ def test_loading():
 
     model = AbsaModel.from_pretrained("sentence-transformers/paraphrase-albert-small-v2", span_contexts=(12, None))
     assert model.aspect_model.span_context == 12
-    assert model.polarity_model.span_context == 3 # <- default
+    assert model.polarity_model.span_context == 3  # <- default
+
 
 def test_save_load(absa_model: AbsaModel) -> None:
     absa_model.polarity_model.span_context = 5

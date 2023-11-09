@@ -66,7 +66,10 @@ def test_train_ordinal_too_high(absa_model: AbsaModel) -> None:
     AbsaTrainer(absa_model, train_dataset=absa_dataset)
     # TODO: Capture warning and test against it.
 
+
 def test_train_column_mapping(absa_model: AbsaModel, absa_dataset: Dataset) -> None:
     absa_dataset = absa_dataset.rename_columns({"text": "sentence", "span": "aspect"})
-    trainer = AbsaTrainer(absa_model, train_dataset=absa_dataset, column_mapping={"sentence": "text", "aspect": "span"})
+    trainer = AbsaTrainer(
+        absa_model, train_dataset=absa_dataset, column_mapping={"sentence": "text", "aspect": "span"}
+    )
     trainer.train()

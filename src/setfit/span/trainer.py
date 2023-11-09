@@ -47,6 +47,7 @@ class AbsaTrainer(ColumnMappingMixin):
             The expected format is a dictionary with the following format:
             `{"text_column_name": "text", "span_column_name": "span", "label_column_name: "label", "ordinal_column_name": "ordinal"}`.
     """
+
     _REQUIRED_COLUMNS = {"text", "span", "label", "ordinal"}
 
     def __init__(
@@ -170,8 +171,42 @@ class AbsaTrainer(ColumnMappingMixin):
             trial (`optuna.Trial` or `Dict[str, Any]`, *optional*):
                 The trial run or the hyperparameter dictionary for hyperparameter search.
         """
+        self.train_aspect(args=args, trial=trial, **kwargs)
+        self.train_polarity(args=polarity_args, trial=trial, **kwargs)
+
+    def train_aspect(
+        self,
+        args: Optional[TrainingArguments] = None,
+        trial: Optional[Union["optuna.Trial", Dict[str, Any]]] = None,
+        **kwargs,
+    ) -> None:
+        """
+        Train the aspect model only.
+
+        Args:
+            args (`TrainingArguments`, *optional*):
+                Temporarily change the aspect training arguments for this training call.
+            trial (`optuna.Trial` or `Dict[str, Any]`, *optional*):
+                The trial run or the hyperparameter dictionary for hyperparameter search.
+        """
         self.aspect_trainer.train(args=args, trial=trial, **kwargs)
-        self.polarity_trainer.train(args=polarity_args, trial=trial, **kwargs)
+
+    def train_polarity(
+        self,
+        args: Optional[TrainingArguments] = None,
+        trial: Optional[Union["optuna.Trial", Dict[str, Any]]] = None,
+        **kwargs,
+    ) -> None:
+        """
+        Train the polarity model only.
+
+        Args:
+            args (`TrainingArguments`, *optional*):
+                Temporarily change the aspect training arguments for this training call.
+            trial (`optuna.Trial` or `Dict[str, Any]`, *optional*):
+                The trial run or the hyperparameter dictionary for hyperparameter search.
+        """
+        self.polarity_trainer.train(args=args, trial=trial, **kwargs)
 
     def add_callback(self, callback):
         """

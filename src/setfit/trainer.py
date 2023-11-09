@@ -115,7 +115,11 @@ class ColumnMappingMixin:
         dataset = dataset.rename_columns(
             {
                 **column_mapping,
-                **{col: f"feat_{col}" for col in dataset.column_names if col not in column_mapping and col not in self._REQUIRED_COLUMNS},
+                **{
+                    col: f"feat_{col}"
+                    for col in dataset.column_names
+                    if col not in column_mapping and col not in self._REQUIRED_COLUMNS
+                },
             }
         )
         dset_format = dataset.format

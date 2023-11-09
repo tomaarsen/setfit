@@ -11,9 +11,9 @@ from datasets import Dataset, load_dataset
 from pytest import LogCaptureFixture
 from sentence_transformers import losses
 from transformers import TrainerCallback
+from transformers import TrainingArguments as TransformersTrainingArguments
 from transformers.testing_utils import require_optuna
 from transformers.utils.hp_naming import TrialShortNamer
-from transformers import TrainingArguments as TransformersTrainingArguments
 
 from setfit import logging
 from setfit.losses import SupConLoss
