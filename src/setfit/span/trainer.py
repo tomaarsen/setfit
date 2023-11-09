@@ -138,6 +138,8 @@ class AbsaTrainer(ColumnMappingMixin):
                     continue
 
                 gold_aspect_span = doc.char_span(start, end)
+                if gold_aspect_span is None:
+                    continue
                 gold_aspects.append(slice(gold_aspect_span.start, gold_aspect_span.end))
                 gold_polarity_labels.append(annotation["label"])
 
