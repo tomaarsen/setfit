@@ -186,6 +186,7 @@ class Trainer(ColumnMappingMixin):
         self.metric = metric
         self.metric_kwargs = metric_kwargs
         self.column_mapping = column_mapping
+        self.logs_mapper = {}
 
         # Seed must be set before instantiating the model when using model_init.
         set_seed(12)
@@ -491,12 +492,21 @@ class Trainer(ColumnMappingMixin):
             logs (`Dict[str, float]`):
                 The values to log.
         """
+        logs = {self.logs_mapper.get(key, key): value for key, value in logs.items()}
         if self.state.epoch is not None:
             logs["epoch"] = round(self.state.epoch, 2)
 
         output = {**logs, **{"step": self.state.global_step}}
         self.state.log_history.append(output)
         return self.callback_handler.on_log(args, self.state, self.control, logs)
+
+    def _set_logs_mapper(self, logs_mapper: Dict[str, str]) -> None:
+        """Set the logging mapper.
+
+        Args:
+            logs_mapper (str): The logging mapper, e.g. {"eval_embedding_loss": "eval_aspect_embedding_loss"}.
+        """
+        self.logs_mapper = logs_mapper
 
     def _train_sentence_transformer(
         self,

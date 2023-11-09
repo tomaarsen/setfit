@@ -85,6 +85,9 @@ class AbsaTrainer(ColumnMappingMixin):
             metric_kwargs=metric_kwargs,
             callbacks=callbacks,
         )
+        self.aspect_trainer._set_logs_mapper(
+            {"eval_embedding_loss": "eval_aspect_embedding_loss", "embedding_loss": "aspect_embedding_loss"}
+        )
         self.polarity_trainer = Trainer(
             model.polarity_model,
             args=polarity_args or args,
@@ -93,6 +96,9 @@ class AbsaTrainer(ColumnMappingMixin):
             metric=metric,
             metric_kwargs=metric_kwargs,
             callbacks=callbacks,
+        )
+        self.polarity_trainer._set_logs_mapper(
+            {"eval_embedding_loss": "eval_polarity_embedding_loss", "embedding_loss": "polarity_embedding_loss"}
         )
 
     def preprocess_dataset(
